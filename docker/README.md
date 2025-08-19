@@ -129,11 +129,7 @@ Use these commands to manage your n8n instance.
     ```bash
     docker-compose logs -f n8n
     ```
-
-## 🚨 Security
-
-The `.gitignore` file is configured to ignore the `.env` file. **Do not ever commit your `.env` file to a repository.** It contains your database password.
-
+    
 ## Data Persistence
 
 Application data is stored in Docker-managed volumes (`n8n_data` and `postgres_data`). This data persists even when the containers are stopped and removed with `docker-compose down`. To delete all data, you would need to remove the volumes manually.
