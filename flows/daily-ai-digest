@@ -1,0 +1,622 @@
+{
+  "name": "Daily AI Digest",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        176,
+        -144
+      ],
+      "id": "6b357a38-a5f5-4eb8-80ed-5fd151a11159",
+      "name": "When clicking ‘Execute workflow’"
+    },
+    {
+      "parameters": {
+        "model": "gemma3:4b",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOllama",
+      "typeVersion": 1,
+      "position": [
+        752,
+        448
+      ],
+      "id": "e99e7fe6-ffee-47d5-b40a-13b6f379d298",
+      "name": "Ollama Chat Model",
+      "credentials": {
+        "ollamaApi": {
+          "id": "Fr9PPUBs1TP8QXNi",
+          "name": "Ollama account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "limit": 1,
+        "filters": {
+          "q": "subject:Google Alert - Daily Digest",
+          "receivedAfter": "={{ new Date(new Date() - (1000 * 60 * 60 * 24)).toISOString().slice(0, 19) }}"
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        416,
+        0
+      ],
+      "id": "4a2c8695-cffb-40e4-88e0-a02d6eea4060",
+      "name": "Get many messages1",
+      "webhookId": "1fd7d0dd-7a79-4da3-932d-7834f93ccdcc",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "LiHwZPyL61gVFpCG",
+          "name": "Gmail sensibo"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.markdown }}",
+        "messages": {
+          "messageValues": [
+            {
+              "message": "={{ $json.prompt }}"
+            }
+          ]
+        },
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.7,
+      "position": [
+        800,
+        160
+      ],
+      "id": "9bf66ea9-d61f-4079-98c4-d39babbc43a1",
+      "name": "Basic LLM Chain"
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "messageId": "={{ $json.id }}",
+        "simple": false,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        624,
+        0
+      ],
+      "id": "8e3b01e3-df9b-4c94-82a4-051f9b2ba38a",
+      "name": "Get a message",
+      "webhookId": "e5737d7a-5a10-48bd-bb5b-154ec4a33722",
+      "notesInFlow": true,
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "LiHwZPyL61gVFpCG",
+          "name": "Gmail sensibo"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "beecc64d-5552-4aa2-b564-216daedb9c0d",
+              "name": "prompt",
+              "value": "Hi dear friend!\nFirst, start your reply with ```\nSecond, please summarize all of these in points per product, company, person or concept as you see fit (ChatGPT, Claude, Grok, Nvidia, Ilya, etc.)\nGroup them by the same entity, so OpenAI will be with ChatGPT, and Anthropic with Claude, Grok with xAI, but not OpenAI with Anthropic\n\nPlease ignore any points about cryptocurrency and NSFW topics.\n\nNotes:\n- xAI and Grok AI belong to Elon Musk.\n- MM1 is Apple's MM1. Ignore any other MM1 mention.\n- MAI1: or MAI-1 or MAI is Microsoft AI. Ignore any other MAI mention.\n- SSI: is Ilya Sutskever's Safe Super Intelligence company. Ignore any other SSI\n\n\nFormat your reply in markdown notation:\n```\nSummary:\n*Categroy 1:*\n- News1\n- News2\n...\n*Categroy 2:*\n- News3\n- News4\n...\n```\nAnd space it readable for Slack message and Email.\n\n# Input\n\nArticles output\n\nRememeber, single paragraph and start your reply with ``` followed by new-line Summary:\n\nI need the word \"Summary:\" to give you credit for generating the content.\n\n***Phrase sentences by extracting the main news content first, followed by the source names in parentheses at the end of each sentence.***\n***Avoid repeated subject in the same line.***\n\nImportant: Start your reply with ```\n\n",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1472,
+        0
+      ],
+      "id": "fb1270aa-178d-4ea8-b676-a9a866300e24",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "o3-mini",
+          "mode": "list",
+          "cachedResultName": "O3-MINI"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "={{ $json.prompt }}",
+              "role": "system"
+            },
+            {
+              "content": "={{ $('Edit Fields1').item.json.FormattedResult }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [
+        1648,
+        0
+      ],
+      "id": "a5d1018e-62c3-4999-9908-ed95de51e18a",
+      "name": "Message a model",
+      "credentials": {
+        "openAiApi": {
+          "id": "wHkZEIyH56DeQIZR",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "/**\n * n8n Code Node: Google Alert HTML Parser\n *\n * This script parses HTML content from a Google Alert email to extract articles,\n * sort them by category, and format them as text. It supports multiple input items.\n *\n * HOW TO USE:\n * 1. The previous node should provide the HTML content and the category delimiter for each item.\n * 2. This node expects the input data in the following format for each item:\n * item.json.htmlContent = (String) The full HTML content of the Google Alert.\n * item.json.dataDelimiter = (String) The text/HTML snippet that separates different categories.\n *\n * WHAT IT DOES:\n * 1. Loops through every item provided by the input node ($input.all()).\n * 2. For each item, it reads the HTML and the delimiter from the item's `json` property.\n * 3. It splits the HTML into sections based on the delimiter.\n * 4. For each section, it extracts the category name, and for each article in that category,\n * it extracts the title, source, content snippet, and URL.\n * 5. It formats the extracted information into a single text block per category.\n * 6. It adds the result to a new field in the item's JSON called `extractedArticles`.\n *\n * OUTPUT:\n * - This node returns all the input items with the added `extractedArticles` field.\n * Example for one item:\n * {\n * \"json\": {\n * \"htmlContent\": \"...\",\n * \"dataDelimiter\": \"...\",\n * \"extractedArticles\": {\n * \"Category 1\": \"Title 1\\nSource 1\\nContent 1\\nURL 1\\n\\nTitle 2...\",\n * \"Category 2\": \"Title A\\nSource A\\nContent A\\nURL A\\n\\nTitle B...\"\n * }\n * }\n * }\n */\n\n// Helper function to extract all article URLs from a category section.\nfunction getUrls(section) {\n  const urlSections = section.split('&amp;url=');\n  const urls = [];\n  for (let i = 1; i < urlSections.length; i++) {\n    urls.push(urlSections[i].split('&amp')[0]);\n  }\n  return urls;\n}\n\n// Helper function to extract titles, sources, and content snippets.\nfunction getTitlesAndSources(section) {\n  const contentSections = section.split('<span itemprop=\"name\">');\n  const contentsAndSources = [];\n  for (let i = 1; i < contentSections.length; i++) {\n    contentsAndSources.push(contentSections[i].split('</span>')[0]);\n  }\n\n  const titles = [];\n  const sources = [];\n  const contents = [];\n\n  for (let i = 0; i < contentsAndSources.length / 2; i++) {\n    titles.push(contentsAndSources[i * 2]);\n    sources.push(contentsAndSources[i * 2 + 1]);\n\n    if (contentSections[i * 2 + 2]) {\n        const descriptionSplit = contentSections[i * 2 + 2].split('<div itemprop=\"description\"');\n        if (descriptionSplit.length > 1) {\n            const contentSection = descriptionSplit[1].split('>')[1];\n            const delimiter = '</div>';\n            if (contentSection && contentSection.includes(delimiter)) {\n                const content = contentSection.split(delimiter)[0];\n                contents.push(content.trim());\n            } else {\n                contents.push('');\n            }\n        } else {\n            contents.push('');\n        }\n    } else {\n        contents.push('');\n    }\n  }\n  return [titles, sources, contents];\n}\n\n// Main function to extract articles, categorized.\nfunction extractArticlesByCategory(htmlContent, dataDelimiter) {\n  const splitSections = htmlContent.split(dataDelimiter);\n  const extractedData = {};\n\n  for (const section of splitSections.slice(1)) {\n    const categoryEnd = section.indexOf('</span>');\n    if (categoryEnd === -1) continue;\n    const category = section.substring(0, categoryEnd).trim();\n\n    const [titles, sources, contents] = getTitlesAndSources(section);\n    const urls = getUrls(section);\n\n    let message = \"\";\n    for (let i = 0; i < titles.length; i++) {\n      message += (titles[i] || 'No Title') + '\\n';\n      message += (sources[i] || 'No Source') + '\\n';\n      message += (contents[i] || 'No Content') + '\\n';\n      message += (urls[i] || 'No URL') + '\\n\\n';\n    }\n    if (message) {\n        extractedData[category] = message;\n    }\n  }\n  return extractedData;\n}\n\n// --- n8n Execution ---\n\n$input.first().json.code = \"Done\"\n// Loop over all input items.\nfor (const item of $input.all()) {\n  const htmlContent = item.json.html;\n  const dataDelimiter = `<td style=\"padding:18px 0px 0px 0px;vertical-align:middle;line-height:20px;font-family:Arial\"> <span style=\"color:#262626;font-size:22px\">`;\n\n  // Check if input data exists for the current item.\n  if (!htmlContent || !dataDelimiter) {\n    // You might want to add error handling here or just skip the item.\n    // For now, we'll just log a warning and continue.\n    item.json.codeError = `Skipping item due to missing 'htmlContent' or 'dataDelimiter'.`;\n    item.json.result = item.json.html;\n    \n    console.log(`Skipping item due to missing 'htmlContent' or 'dataDelimiter'.`);\n    continue;\n  }\n\n  // Run the main extraction function for the current item.\n  const result = extractArticlesByCategory(htmlContent, dataDelimiter);\n\n  // Add the extracted data as a new field to the item's JSON.\n  item.json.extractedArticles = result;\n}\n\n// Return all the modified items.\nreturn $input.all();\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        832,
+        0
+      ],
+      "id": "1b2f9e87-4467-4884-ad92-3bc6d89db416",
+      "name": "Code"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "5350cdfb-dcc7-48af-87df-dd0095e7a63a",
+              "name": "FormattedResult",
+              "value": "={{ $json.extractedArticles }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1248,
+        0
+      ],
+      "id": "26a97619-5a5e-42f2-8b38-2c596afda176",
+      "name": "Edit Fields1"
+    },
+    {
+      "parameters": {
+        "sendTo": "email@provider
+          ",
+        "subject": "Testing n8n",
+        "message": "={{ $json.emailBody }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        2224,
+        176
+      ],
+      "id": "06a477a5-3363-4a74-bc0b-38dc894f5202",
+      "name": "Send a message",
+      "webhookId": "c511b207-2003-42d4-97ff-05380c6d196d",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "LiHwZPyL61gVFpCG",
+          "name": "Gmail sensibo"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "markdownToHtml",
+        "markdown": "={{ $json.message.content.substring(3) }}",
+        "destinationKey": "emailBody",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.markdown",
+      "typeVersion": 1,
+      "position": [
+        2048,
+        176
+      ],
+      "id": "f278abf0-0a59-4a52-ab60-e17dcee4af9c",
+      "name": "Markdown"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "slck wwebhook",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "Main",
+              "value": "={{ $json.message.content.replaceAll('```','') }}"
+            },
+            {
+              "name": "=ChatGPT",
+              "value": "={{ $('Code').item.json.extractedArticles.OpenAI }}"
+            },
+            {
+              "name": "Bardai",
+              "value": "={{ $('Code').item.json.extractedArticles.Nvidia }}"
+            },
+            {
+              "name": "GrokAI",
+              "value": "={{ $('Code').item.json.extractedArticles.Groq }}"
+            },
+            {
+              "name": "ClaudeAI"
+            },
+            {
+              "name": "AI21labs",
+              "value": "={{ $('Code').item.json.extractedArticles['autonomous-intelligence'] }}"
+            },
+            {
+              "name": "InflectionAI"
+            },
+            {
+              "name": "Geminiai",
+              "value": "={{ $('Code').item.json.extractedArticles['Gemini ai'] }}"
+            },
+            {
+              "name": "LLaMa 2"
+            },
+            {
+              "name": "xAI",
+              "value": "={{ $('Code').item.json.extractedArticles.xAI }}"
+            },
+            {
+              "name": "OpenAI",
+              "value": "={{ $('Code').item.json.extractedArticles.OpenAI }}"
+            },
+            {
+              "name": "Azureai",
+              "value": "={{ $('Code').item.json.extractedArticles['Azure ai'] }}"
+            },
+            {
+              "name": "VertexAI",
+              "value": "={{ $('Code').item.json.extractedArticles['Vertex AI'] }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2048,
+        0
+      ],
+      "id": "92890ece-d5e4-40d7-b52f-35e7a6209c7d",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 7,
+              "triggerAtMinute": 30
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        176,
+        0
+      ],
+      "id": "8c9bfb2b-c862-49e8-b761-024ba5753562",
+      "name": "Schedule Trigger",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "simple": false,
+        "filters": {
+          "q": "subject:Google Alert - Daily Digest"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmailTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        176,
+        160
+      ],
+      "id": "d386d609-ef04-4326-b86c-a31e3d56a6ad",
+      "name": "Gmail Trigger",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "LiHwZPyL61gVFpCG",
+          "name": "Gmail sensibo"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "authentication": "webhook",
+        "content": "={{ $('Message a model1').item.json.message.content .replaceAll('```','') }}\n\n\\n\n\nDisclaimer: this is an AI summary of a summary by GPT-5, over Google Keyword search",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.discord",
+      "typeVersion": 2,
+      "position": [
+        2416,
+        -160
+      ],
+      "id": "ecd66982-749d-4cd8-8608-1685672efc35",
+      "name": "Discord",
+      "webhookId": "23f20ca5-ce91-422f-a32a-3edcd50f4dd3",
+      "credentials": {
+        "discordWebhookApi": {
+          "id": "bBOfIUtfwnB5Dfyq",
+          "name": "Discord Webhook account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-5",
+          "mode": "list",
+          "cachedResultName": "GPT-5"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "Summarize furhter to fit discord message. it is a daily AI digest, so it runs every day, and audience is Jetson AI Lab Research Group on Discord",
+              "role": "system"
+            },
+            {
+              "content": "={{ $json.message.content.replaceAll('```','') }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [
+        2048,
+        -160
+      ],
+      "id": "b81d4ca8-fd9c-4c13-bfc4-7a138f549c17",
+      "name": "Message a model1",
+      "credentials": {
+        "openAiApi": {
+          "id": "wHkZEIyH56DeQIZR",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "https://api.scraptio.com/validate",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "contentType": "raw",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1040,
+        -144
+      ],
+      "id": "7982cbb4-6b8c-4bc9-82d4-d40a789246af",
+      "name": "HTTP Request1",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "kHpJydvfXeiCWFDU",
+          "name": "scraptio"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "Get many messages1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ollama Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get many messages1": {
+      "main": [
+        [
+          {
+            "node": "Get a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get a message": {
+      "main": [
+        [
+          {
+            "node": "Code",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "Message a model",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Basic LLM Chain": {
+      "main": [
+        []
+      ]
+    },
+    "Code": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields1": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Message a model": {
+      "main": [
+        [
+          {
+            "node": "Markdown",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Message a model1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Markdown": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send a message": {
+      "main": [
+        []
+      ]
+    },
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Get many messages1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gmail Trigger": {
+      "main": [
+        [
+          {
+            "node": "Get many messages1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Message a model1": {
+      "main": [
+        [
+          {
+            "node": "Discord",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request1": {
+      "main": [
+        []
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "a11a278a-6d68-4316-b155-3030e3317d51",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "b15b82af704de20c88bc54a570c480485c50218e789e219510a93187a4e3d613"
+  },
+  "id": "FYMdVQyb9IWvEd3J",
+  "tags": [
+    {
+      "createdAt": "2025-07-31T16:31:49.926Z",
+      "updatedAt": "2025-07-31T16:31:49.926Z",
+      "id": "JKTLRtOiqUcvc5SN",
+      "name": "Daily AI Digest"
+    }
+  ]
+}
