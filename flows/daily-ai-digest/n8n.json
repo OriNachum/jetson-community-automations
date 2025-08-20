@@ -130,9 +130,9 @@
       "parameters": {
         "modelId": {
           "__rl": true,
-          "value": "o3-mini",
+          "value": "gpt-5",
           "mode": "list",
-          "cachedResultName": "O3-MINI"
+          "cachedResultName": "GPT-5"
         },
         "messages": {
           "values": [
