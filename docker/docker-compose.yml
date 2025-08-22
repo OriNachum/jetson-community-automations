@@ -1,34 +1,44 @@
-version: '3.7'
+version: "3.8"
 
 services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    restart: always
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB?err}
+      POSTGRES_USER: ${POSTGRES_USER?err}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD?err}
+    ports:
+      - "127.0.0.1:5433:5432"   # change/remove later if you need LAN access
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-postgres}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
   n8n:
     image: docker.n8n.io/n8nio/n8n
     restart: always
     ports:
-      - "127.0.0.1:${N8N_PORT}:5678" # <-- Reads port from .env
+      - "127.0.0.1:${N8N_PORT?err}:5678"
     environment:
-      - DB_TYPE=postgresdb
-      - DB_POSTGRESDB_HOST=postgres
-      - DB_POSTGRESDB_PORT=5432
-      - DB_POSTGRESDB_DATABASE=${POSTGRES_DB} # <-- Reads from .env
-      - DB_POSTGRESDB_USER=${POSTGRES_USER}     # <-- Reads from .env
-      - DB_POSTGRESDB_PASSWORD=${POSTGRES_PASSWORD} # <-- Reads from .env
+      DB_TYPE: postgresdb
+      DB_POSTGRESDB_HOST: postgres
+      DB_POSTGRESDB_PORT: 5432
+      DB_POSTGRESDB_DATABASE: ${POSTGRES_DB?err}
+      DB_POSTGRESDB_USER: ${POSTGRES_USER?err}
+      DB_POSTGRESDB_PASSWORD: ${POSTGRES_PASSWORD?err}
+      # Strongly recommended so credentials survive restarts/migrations:
+      N8N_ENCRYPTION_KEY: ${N8N_ENCRYPTION_KEY?err}
     volumes:
       - n8n_data:/home/node/.n8n
     depends_on:
-      - postgres
-
-  postgres:
-    image: postgres:11
-    restart: always
-    environment:
-      - POSTGRES_DB=${POSTGRES_DB}             # <-- Reads from .env
-      - POSTGRES_USER=${POSTGRES_USER}             # <-- Reads from .env
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}     # <-- Reads from .env
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
+      postgres:
+        condition: service_healthy
 
 volumes:
   n8n_data:
     external: true
-  postgres_data:
+  postgres_data: {}
