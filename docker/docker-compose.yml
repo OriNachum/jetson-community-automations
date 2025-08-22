@@ -12,6 +12,7 @@ services:
       - "127.0.0.1:5433:5432"   # change/remove later if you need LAN access
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - ./postgres-init:/docker-entrypoint-initdb.d
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-postgres}"]
       interval: 5s
@@ -39,6 +40,5 @@ services:
         condition: service_healthy
 
 volumes:
-  n8n_data:
-    external: true
+  n8n_data: {}
   postgres_data: {}
