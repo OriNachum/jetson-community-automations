@@ -1,0 +1,777 @@
+{
+  "name": "Sensibo-DAY",
+  "nodes": [
+    {
+      "parameters": {
+        "url": "https://home.sensibo.com/api/v2/users/me/pods",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpQueryAuth",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "fields",
+              "value": "motionSensors"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -1200,
+        80
+      ],
+      "id": "dbccb23c-dfe3-425b-9443-7887fdd8e0ee",
+      "name": "HTTP Request1",
+      "credentials": {
+        "httpQueryAuth": {
+          "id": "<sensibo-id>",
+          "name": "Sensibo"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "https://home.sensibo.com/api/v2/pods/<pod-id>/acStates",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpQueryAuth",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -992,
+        80
+      ],
+      "id": "fbed5583-0226-4bf5-aaa4-60bc60e9db5b",
+      "name": "Get States",
+      "credentials": {
+        "httpQueryAuth": {
+          "id": "<sensibo-id>",
+          "name": "Sensibo"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "https://home.sensibo.com/api/v2/pods/<pod-id>/measurements",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpQueryAuth",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -1392,
+        80
+      ],
+      "id": "01bf5f9b-e01b-4177-920f-9f856fdc22e6",
+      "name": "Get neasurements",
+      "credentials": {
+        "httpQueryAuth": {
+          "id": "<sensibo-id>",
+          "name": "Sensibo"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "*/5 9-22 * * *"
+            },
+            {
+              "field": "cronExpression",
+              "expression": "*/5 23 * * *"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -1824,
+        80
+      ],
+      "id": "3f5d8a86-2389-457d-8f2a-fe912bee51ea",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-5-mini",
+          "mode": "list",
+          "cachedResultName": "GPT-5-MINI"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "You are my AC manager. Look at the history of my AC measurements at Sensibo and decide if I should enable it or disable it.\n\nConsider the time, and that it is our sleep time - so take our health into consideration.\nAlso, too hot or too cold (Or too humid) could wake us up and is not healthy.\n28 degrees is comfortable, 55% is great, above 61% it is humid.\ndue central AC, too much balance on stats measured in livingroom is cold on the other sleep rooms. \n\nAlso, using 26 targetTemperature was needed to make it actually work when it was 30.3 degrees.\nbut lower than 28 degrees is freezing othr rooms.\n\nEither use dry mode or turn off - it is important to avoid repeated turning on and off, and we want it turned off most of the night - use dry mode with care.\n\nRemember, your plans wont be transferred to next run, so make decision for the current moment only, and trust yourself to make a proper decision next run (in 5 minutes)\n\nResponse in json: { \"thinking\": \"...\", \"on\": true/false, \"mode\":\"dry\",\n\"targetTemperature\": ## }",
+              "role": "system"
+            },
+            {
+              "content": "=States:\n{{ JSON.stringify($('Get States').item.json.result[0]) }} \n\n{{ JSON.stringify($('Get States').item.json.result[1]) }} \n\n{{ JSON.stringify($('Get States').item.json.result[2]) }} \n\n\nMeasurements:\n{{ JSON.stringify($('Get neasurements').item.json.result) }}\n\n\nTime: \n{{  $('Schedule Trigger').item.json.timestamp }}\n\nRemember, my target is ~55%, but lower temperature than 28 will be freezing the other rooms.\nThis is central AC unit.\n\nRemember, your plans wont be transferred to next run, so make decision for the current moment only, and trust yourself to make a proper decision next run (in 5 minutes)\n\nResponse in json: { \"thinking\": \"...\", \"on\": true/false, \"mode\":\"dry\",\n\"targetTemperature\": ## }",
+              "role": "=user"
+            }
+          ]
+        },
+        "jsonOutput": true,
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [
+        -576,
+        -112
+      ],
+      "id": "af1f47a5-4b98-484f-8d52-3e38add0dc4c",
+      "name": "Message a model",
+      "credentials": {
+        "openAiApi": {
+          "id": "NzN2hGKCj3adLTTj",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "ad57b76a-3d01-49a8-b9e7-9d07c97979ab",
+              "leftValue": "={{ $('Basic LLM Chain').item.json.output['on'] }}",
+              "rightValue": "={{ $('Get States').item.json.result[0].acState.on }}",
+              "operator": {
+                "type": "boolean",
+                "operation": "notEquals"
+              }
+            },
+            {
+              "id": "bacd350d-07ca-4e9a-b2e4-934b729cf200",
+              "leftValue": "={{ $('Basic LLM Chain').item.json.output['mode'] }}",
+              "rightValue": "={{ $('Get States').item.json.result[0].acState.mode }}",
+              "operator": {
+                "type": "string",
+                "operation": "notEquals"
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        464,
+        64
+      ],
+      "id": "4bb6befb-6390-4591-976c-1e5b9483e9af",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://home.sensibo.com/api/v2/pods/<pod-id>/acStates",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpQueryAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"acState\": {\n    \"on\": {{ $('Basic LLM Chain').item.json.output['on'] }},\n    \"targetTemperature\": {{ $('Basic LLM Chain').item.json.output['targetTemperature'] }},\n    \"temperatureUnit\": \"{{ $('Get States').item.json.result[1].acState.temperatureUnit }}\",\n\n    \"mode\": \"{{ $('Basic LLM Chain').item.json.output['mode'] }}\"\n\n\n  }\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        800,
+        48
+      ],
+      "id": "47fcbef4-b9cb-4680-9ad0-a0761f63e625",
+      "name": "Change state",
+      "credentials": {
+        "httpQueryAuth": {
+          "id": "<sensibo-id>",
+          "name": "Sensibo"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "f9e5c69f-4220-476e-8dc5-13cd3dabe7c2",
+              "leftValue": "={{\n\n(\n (\n   ( $json.result[0].time.secondsAgo > 1800)  && \n   ( $json.result[0].acState.on  == false)  \n ) || \n ( $json.result[0].acState.on  == true) \n) && \n(\n  (\n    $('Select rows from a table').item.json.on ==   $json.result[0].acState.on &&\n    $('Select rows from a table').item.json.mode ==   $json.result[0].acState.mode &&\n    $('Select rows from a table').item.json.targetTemperature ==   $json.result[0].acState.targetTemperature \n  )\n  ||\n  $json.result[0].time.secondsAgo > 900\n)\n}}",
+              "rightValue": "={{ $json.result[0].time.secondsAgo }} > 1200",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -832,
+        80
+      ],
+      "id": "9fa0140d-240f-458c-a546-6a48c64f14b0",
+      "name": "If1",
+      "alwaysOutputData": false
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{\"thinking\":\"The indoor humidity is 63 % and the user wants ~45 %. In dry mode each °C lower in set‑point generally pulls about 2–3 % humidity, so a drop of ~8–9 °C would bring the humidity closer to target. The current set‑point is 28 °C, so lowering it to 26 °C should give enough dehumidification without over‑cooling the room. The AC remains on and in dry mode.\",\"on\":true,\"mode\":\"dry\",\"targetTemperature\":26}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        -432,
+        288
+      ],
+      "id": "30e80085-bc87-404a-a205-d870753218b8",
+      "name": "Structured Output Parser"
+    },
+    {
+      "parameters": {
+        "schema": {
+          "__rl": true,
+          "value": "public",
+          "mode": "list",
+          "cachedResultName": "public"
+        },
+        "table": {
+          "__rl": true,
+          "value": "sensibo",
+          "mode": "list",
+          "cachedResultName": "sensibo"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "on": "={{ $json.output.on }}",
+            "mode": "={{ $json.output.mode }}",
+            "targetTemperature": "={{ $json.output.targetTemperature }}",
+            "timestamp": "={{ $now }}",
+            "thinking": "={{ $json.output.thinking }}",
+            "id": "={{ $now.toMillis() }}"
+          },
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "mode",
+              "displayName": "mode",
+              "required": true,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "thinking",
+              "displayName": "thinking",
+              "required": true,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "on",
+              "displayName": "on",
+              "required": true,
+              "defaultMatch": false,
+              "display": true,
+              "type": "boolean",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "targetTemperature",
+              "displayName": "targetTemperature",
+              "required": true,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "timestamp",
+              "displayName": "timestamp",
+              "required": true,
+              "defaultMatch": false,
+              "display": true,
+              "type": "dateTime",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -240,
+        64
+      ],
+      "id": "dced6054-60d7-46ac-84df-89294398b1ba",
+      "name": "Insert rows in a table",
+      "credentials": {
+        "postgres": {
+          "id": "i4w1JvGn90LTIQ6I",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "select",
+        "schema": {
+          "__rl": true,
+          "mode": "list",
+          "value": "public"
+        },
+        "table": {
+          "__rl": true,
+          "value": "sensibo",
+          "mode": "list",
+          "cachedResultName": "sensibo"
+        },
+        "limit": 1,
+        "sort": {
+          "values": [
+            {
+              "column": "timestamp",
+              "direction": "DESC"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -1616,
+        80
+      ],
+      "id": "168533a8-8a65-4e00-b7e0-44a338b03ee0",
+      "name": "Select rows from a table",
+      "credentials": {
+        "postgres": {
+          "id": "i4w1JvGn90LTIQ6I",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "model": "pdevine/gpt-oss:20b-offload",
+        "options": {
+          "temperature": 0.1,
+          "keepAlive": "6m",
+          "numPredict": 2000
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOllama",
+      "typeVersion": 1,
+      "position": [
+        -576,
+        272
+      ],
+      "id": "60b37465-5d6b-46a4-b44e-6ea2e176d4d1",
+      "name": "Ollama Chat Model",
+      "credentials": {
+        "ollamaApi": {
+          "id": "2ikKZi6FVyoHXwvu",
+          "name": "Thor"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "authentication": "serviceAccount",
+        "sendTo": "username@youremail.com",
+        "subject": "Sensibo status",
+        "message": "=on: {{ $json.message.content['on'] }}\non: {{ $json.message.content['mode'] }}\non: {{ $json.message.content['targetTemperature'] }}\n---\n\nReasoning: {{ $json.message.content['thinking'] }}\n---\nLast state: {{ JSON.stringify($('Get States').item.json.result[0]) }}\n\nLast measurements: {{ JSON.stringify($('Get neasurements').item.json.result) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        -112
+      ],
+      "id": "1aaff5c8-eefd-4c9c-846f-c1df18fc814d",
+      "name": "Send a message1",
+      "webhookId": "f15aed71-e71d-4af2-ac41-11bdea3b0169",
+      "alwaysOutputData": false,
+      "credentials": {
+        "googleApi": {
+          "id": "5YccuzImTfzqYLND",
+          "name": "Gmail account 2"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "ad57b76a-3d01-49a8-b9e7-9d07c97979ab",
+              "leftValue": "={{ $('Message a model').item.json.message.content['on'] }}",
+              "rightValue": "={{ $('Get States').item.json.result[0].acState.on }}",
+              "operator": {
+                "type": "boolean",
+                "operation": "notEquals"
+              }
+            },
+            {
+              "id": "cb8efc18-7791-4cb2-b0d5-4629f00cccf4",
+              "leftValue": "={{ $('Message a model').item.json.message.content['mode'] }}",
+              "rightValue": "={{ $('Get States').item.json.result[0].acState.mode }}",
+              "operator": {
+                "type": "string",
+                "operation": "notEquals"
+              }
+            },
+            {
+              "id": "6ac1d012-9162-4ef7-ac21-fd23e8ae6fa8",
+              "leftValue": "={{ $('Message a model').item.json.message.content['targetTemperature'] }}",
+              "rightValue": "={{ $('Get States').item.json.result[0].acState.targetTemperature }}",
+              "operator": {
+                "type": "number",
+                "operation": "notEquals"
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        256,
+        -112
+      ],
+      "id": "3e559651-ff0e-4ebc-8214-7587f41fdf67",
+      "name": "If2"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://home.sensibo.com/api/v2/pods/<pod-id>/acStates",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpQueryAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"acState\": {\n    \"on\": {{ $('Message a model').item.json.message.content['on'] }},\n    \"targetTemperature\": {{ $('Message a model').item.json.message.content['targetTemperature'] }},\n    \"temperatureUnit\": \"{{ $('Get States').item.json.result[1].acState.temperatureUnit }}\",\n\n    \"mode\": \"{{ $('Message a model').item.json.message.content['mode'] }}\"\n\n\n  }\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        592,
+        -128
+      ],
+      "id": "3716f167-f5dc-487e-9817-c8f32942f76e",
+      "name": "Change state1",
+      "credentials": {
+        "httpQueryAuth": {
+          "id": "<sensibo-id>",
+          "name": "Sensibo"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "guildId": {
+          "__rl": true,
+          "value": "<discord-channel-id>",
+          "mode": "list",
+          "cachedResultName": "JetsonBot experiments",
+          "cachedResultUrl": "https://discord.com/channels/<discord-channel-id>"
+        },
+        "channelId": {
+          "__rl": true,
+          "value": "1418452020725153824",
+          "mode": "list",
+          "cachedResultName": "ac-feed",
+          "cachedResultUrl": "https://discord.com/channels/<discord-channel-id>/1418452020725153824"
+        },
+        "content": "=on: {{ $json['on'] }}\nmode: {{ $json['mode'] }}\ntargetTemperture: {{ $json['targetTemperature'] }}℃\n---\n\nReasoning: {{ $json.thinking }}\n---\n# States:\n\nMain room measurements:\n{{ JSON.stringify($('Get States').item.json.result[0]) }} \n\nMain room measurements:\nTemperature: {{ JSON.stringify($('Get neasurements').item.json.result[0].temperature) }}℃ \nHumidity: {{ JSON.stringify($('Get neasurements').item.json.result[0].humidity) }} \nFeels Like: {{ JSON.stringify($('Get neasurements').item.json.result[0].feelsLike) }}℃ \n\n\n\nBedroom 1 Temperture: {{ $('HTTP Request1').item.json.result[0].motionSensors[0].measurements.temperature }}\nBedroom 1 Humidity: {{ $('HTTP Request1').item.json.result[0].motionSensors[0].measurements.humidity }}\nBedroom 1 active: {{ $('HTTP Request1').item.json.result[0].motionSensors[0].measurements.motion }}\n\nBedroom 2 Temperature: {{ $('HTTP Request1').item.json.result[0].motionSensors[1].measurements.temperature }}\nBedroom 2 Humidity: {{ $('HTTP Request1').item.json.result[0].motionSensors[1].measurements.humidity }}\nBedroom 2 active: {{ $('HTTP Request1').item.json.result[0].motionSensors[1].measurements.motion }}\n\n\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.discord",
+      "typeVersion": 2,
+      "position": [
+        112,
+        64
+      ],
+      "id": "f69fe87e-acaf-4283-95bf-1138aacde7eb",
+      "name": "Send a message2",
+      "webhookId": "0dc0bc0c-78ee-44dc-b3cb-5285a13c6153",
+      "credentials": {
+        "discordBotApi": {
+          "id": "1MR8bRN1yJ23AsZo",
+          "name": "Jetson bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=# States:\n\nMain room measurements:\nTemperature: {{ JSON.stringify($('Get neasurements').item.json.result[0].temperature) }}℃ \nHumidity: {{ JSON.stringify($('Get neasurements').item.json.result[0].humidity) }} \nFeels Like: {{ JSON.stringify($('Get neasurements').item.json.result[0].feelsLike) }}℃ \n\nMain room Measurements, by which the AC decides to set on \"sleep mode\"\nThese can be higher than desired temperature. \n\n# Bedrooms measurements:\nI expected these to be around 26.5 degrees and around 52% moisture.\nWhen they are not - you need to make sure to fix it when they are active.\n\nBedroom 1 Temperture: {{ $('HTTP Request1').item.json.result[0].motionSensors[0].measurements.temperature }}\nBedroom 1 Humidity: {{ $('HTTP Request1').item.json.result[0].motionSensors[0].measurements.humidity }}\nBedroom 1 active: {{ $('HTTP Request1').item.json.result[0].motionSensors[0].measurements.motion }}\n\nBedroom 2 Temperature: {{ $('HTTP Request1').item.json.result[0].motionSensors[1].measurements.temperature }}\nBedroom 2 Humidity: {{ $('HTTP Request1').item.json.result[0].motionSensors[1].measurements.humidity }}\nBedroom 2 active: {{ $('HTTP Request1').item.json.result[0].motionSensors[1].measurements.motion }}\n\nTime: \n{{  $('Schedule Trigger').item.json.timestamp }}\n\nRemember, my target is ~52% and 26.5 degrees in bedrooms to the comfortable range of (26-27) and about the main room only when bedrooms are not active (Usually ~3 degress higher).\nUse only 24 degrees (For main room), on dry/cool mode.\nThis is central AC unit.\n\nNote when room temperature is over 4 percent between rooms.\nIf main room is ~30℃ and bedrooms are ~26.2℃, it will be very hot in main room during day.\n\nThis is due a main room exposed to sun and big windows.\nIn that case, make sure the livingroom is cold instead of the rooms.\n\nOnce below 55% humidity, go for Cool.\nAt below 55%, dry mode is less effective.\n\nTargetTemperature must be an integer.\nMode field options are: \"dry\" OR \"cool\"\n\nRespond in json: { \"thinking\": \"...\", \"on\": true/false, \"mode\":\"[dry/cool]\",\n\"targetTemperature\": ## }\n\nStart replying with {",
+        "hasOutputParser": true,
+        "messages": {
+          "messageValues": [
+            {
+              "message": "You are my AC manager.\n\nLook at the history of my AC measurements at Sensibo and decide if I should enable it or disable it.  \n\nConsider the time, and that it is our awake time, but we are during Yom Kipur holiday and have no remote control - so take our health into consideration. Also, too hot or too cold (Or too humid). 26.5 percentage at Rooms is comfortable (26-27), 52% is great, above 60% it is humid. \n\nDue central AC, the Main room will be higher than the desired temperature and that is ok and expected.   \n\nConsider the Main temperature when deciding what temperature to send, and Room temperature when deciding what is comfortable.\n\nNote when room temperature is over 4 percent between rooms.\nIf main room is ~30℃ and bedrooms are ~26.2℃, it will be very hot in main room during day.\n\nThis is due a livingroom exposed to sun and big windows.\nIn that case, make sure the livingroom is cold instead of the rooms.\n\nOnce below 55% humidity, go for Cool.\nAt below 55%, dry mode is less effective.\n\nWhen bedrooms are not active - prioritize main room.\n\nMode field options are: \"dry\" OR \"cool\"\n\nRespond in json: { \"thinking\": \"...\", \"on\": true/false, \"mode\":\"[dry/cool]\", \"targetTemperature\": ## }  \n\nStart replying with {"
+            }
+          ]
+        },
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.7,
+      "position": [
+        -576,
+        64
+      ],
+      "id": "54958e2e-b09e-4de0-8e17-f64fdf3901ba",
+      "name": "Basic LLM Chain"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Get neasurements": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Select rows from a table",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get States": {
+      "main": [
+        [
+          {
+            "node": "If1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Message a model": {
+      "main": [
+        [
+          {
+            "node": "Send a message1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Change state",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If1": {
+      "main": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Structured Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Insert rows in a table": {
+      "main": [
+        [
+          {
+            "node": "Send a message2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Select rows from a table": {
+      "main": [
+        [
+          {
+            "node": "Get neasurements",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ollama Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send a message1": {
+      "main": [
+        [
+          {
+            "node": "If2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If2": {
+      "main": [
+        [
+          {
+            "node": "Change state1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request1": {
+      "main": [
+        [
+          {
+            "node": "Get States",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send a message2": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Basic LLM Chain": {
+      "main": [
+        [
+          {
+            "node": "Insert rows in a table",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Asia/Jerusalem",
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "versionId": "015d2a37-0950-436e-9a14-f629cb50a9e9",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "<instance-id>"
+  },
+  "id": "mNo3uYShsRIfXSNN",
+  "tags": [
+    {
+      "createdAt": "2025-08-31T20:30:37.934Z",
+      "updatedAt": "2025-08-31T20:30:37.934Z",
+      "id": "XoeDgcbenMTehkbm",
+      "name": "Home"
+    }
+  ]
+}
