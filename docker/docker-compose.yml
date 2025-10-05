@@ -39,6 +39,15 @@ services:
       postgres:
         condition: service_healthy
 
+  adminer:
+    image: adminer
+    restart: always
+    ports:
+      - "127.0.0.1:8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
 volumes:
   n8n_data: {}
   postgres_data: {}
