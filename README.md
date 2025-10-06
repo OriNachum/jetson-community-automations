@@ -1,5 +1,7 @@
 # 🤖 Jetson AI Research Lab - Community Automations
 
+<img width="1536" height="1024" alt="image" src="https://github.com/user-attachments/assets/023a139e-1aaa-4daf-8fa3-be4c8039cd64" />
+
 <div align="center">
 
 [![Discord](https://img.shields.io/badge/Discord-Join%20Us-5865F2?style=for-the-badge&logo=discord&logoColor=white)](https://discord.com/invite/6wG2rkVqdU)
@@ -14,7 +16,6 @@
 
 ---
 
-<img width="1536" height="1024" alt="image" src="https://github.com/user-attachments/assets/023a139e-1aaa-4daf-8fa3-be4c8039cd64" />
 
 ## 📖 About
 
