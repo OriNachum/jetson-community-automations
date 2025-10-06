@@ -14,6 +14,8 @@
 
 ---
 
+<img width="1536" height="1024" alt="image" src="https://github.com/user-attachments/assets/023a139e-1aaa-4daf-8fa3-be4c8039cd64" />
+
 ## 📖 About
 
 Welcome to the **Jetson AI Research Lab Community Automations** repository! This project provides a collection of n8n workflows and Discord bot automations designed to enhance collaboration, productivity, and engagement within the Jetson AI Research community.
