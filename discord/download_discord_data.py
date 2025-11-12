@@ -47,9 +47,9 @@ class DiscordDataDownloader:
         
         # Setup Discord client with necessary intents
         intents = discord.Intents.default()
-        intents.message_content = True
-        intents.guilds = True
-        intents.members = True
+        intents.message_content = True  # Required to read message content
+        intents.guilds = True  # Required to access guild/server info (non-privileged)
+        # Note: members intent is NOT required for downloading messages
         
         self.client = discord.Client(intents=intents)
         self.setup_events()
@@ -78,6 +78,16 @@ class DiscordDataDownloader:
         """
         print(f"\n📁 Processing server: {guild.name} (ID: {guild.id})")
         
+        # Log bot permissions in the guild
+        bot_member = guild.me
+        if bot_member:
+            perms = bot_member.guild_permissions
+            print(f"🔑 Bot permissions in server:")
+            print(f"   - Read Messages: {perms.read_messages}")
+            print(f"   - Read Message History: {perms.read_message_history}")
+            print(f"   - View Channels: {perms.view_channel}")
+            print(f"   - Send Messages: {perms.send_messages}")
+        
         # Create guild directory
         guild_dir = self.output_dir / self.sanitize_filename(guild.name)
         guild_dir.mkdir(exist_ok=True)
@@ -100,9 +110,20 @@ class DiscordDataDownloader:
         print(f"📢 Found {len(channels)} text channel(s)")
         
         for channel in channels:
-            # Skip private channels
-            if not channel.permissions_for(guild.me).read_messages:
-                print(f"  ⏭️  Skipping private channel: {channel.name}")
+            # Check channel-specific permissions
+            perms = channel.permissions_for(guild.me)
+            
+            # Log missing permissions
+            missing_perms = []
+            if not perms.view_channel:
+                missing_perms.append("View Channel")
+            if not perms.read_messages:
+                missing_perms.append("Read Messages")
+            if not perms.read_message_history:
+                missing_perms.append("Read Message History")
+            
+            if missing_perms:
+                print(f"  ⏭️  Skipping #{channel.name} - Missing permissions: {', '.join(missing_perms)}")
                 continue
                 
             await self.download_channel_data(guild_dir, channel)
@@ -176,10 +197,15 @@ class DiscordDataDownloader:
             with open(channel_dir / "all_messages.json", "w", encoding="utf-8") as f:
                 json.dump(messages_list, f, indent=2, ensure_ascii=False)
                 
-        except discord.Forbidden:
+        except discord.Forbidden as e:
             print(f"    ❌ No permission to read messages in #{channel.name}")
+            print(f"       Error details: {e}")
+        except discord.HTTPException as e:
+            print(f"    ❌ HTTP error downloading messages from #{channel.name}")
+            print(f"       Error details: {e}")
         except Exception as e:
-            print(f"    ❌ Error downloading messages: {e}")
+            print(f"    ❌ Unexpected error downloading messages from #{channel.name}")
+            print(f"       Error details: {e}")
     
     async def download_threads(self, channel_dir: Path, channel: discord.TextChannel):
         """
@@ -215,10 +241,15 @@ class DiscordDataDownloader:
             
             print(f"    ✅ Downloaded {thread_count} thread(s) from #{channel.name}")
             
-        except discord.Forbidden:
+        except discord.Forbidden as e:
             print(f"    ❌ No permission to read threads in #{channel.name}")
+            print(f"       Error details: {e}")
+        except discord.HTTPException as e:
+            print(f"    ❌ HTTP error downloading threads from #{channel.name}")
+            print(f"       Error details: {e}")
         except Exception as e:
-            print(f"    ❌ Error downloading threads: {e}")
+            print(f"    ❌ Unexpected error downloading threads from #{channel.name}")
+            print(f"       Error details: {e}")
     
     async def download_thread_data(self, threads_dir: Path, thread: discord.Thread):
         """
@@ -245,10 +276,15 @@ class DiscordDataDownloader:
         try:
             async for message in thread.history(limit=None, oldest_first=True):
                 thread_data["messages"].append(self.format_message(message))
-        except discord.Forbidden:
+        except discord.Forbidden as e:
             print(f"      ⏭️  No permission to read thread: {thread.name}")
+            print(f"         Error details: {e}")
+        except discord.HTTPException as e:
+            print(f"      ❌ HTTP error reading thread {thread.name}")
+            print(f"         Error details: {e}")
         except Exception as e:
-            print(f"      ❌ Error reading thread {thread.name}: {e}")
+            print(f"      ❌ Unexpected error reading thread {thread.name}")
+            print(f"         Error details: {e}")
         
         # Save thread data
         with open(threads_dir / thread_filename, "w", encoding="utf-8") as f:
@@ -343,7 +379,42 @@ class DiscordDataDownloader:
         print("🤖 Starting Discord Data Downloader...")
         print(f"📂 Output directory: {self.output_dir.absolute()}")
         
-        await self.client.start(self.token)
+        try:
+            await self.client.start(self.token)
+        except discord.PrivilegedIntentsRequired as e:
+            print("\n" + "="*70)
+            print("❌ PRIVILEGED INTENTS NOT ENABLED")
+            print("="*70)
+            print("\nYour bot is missing required privileged intents!")
+            print("\n📋 Required Steps:")
+            print("1. Go to: https://discord.com/developers/applications")
+            print("2. Select your application")
+            print("3. Navigate to the 'Bot' section")
+            print("4. Scroll down to 'Privileged Gateway Intents'")
+            print("5. Enable this intent:")
+            print("   ✓ MESSAGE CONTENT INTENT")
+            print("6. Click 'Save Changes'")
+            print("7. Run this script again")
+            print("\n💡 Note: Only MESSAGE CONTENT INTENT is required.")
+            print("   Server Members Intent is NOT needed for this bot.")
+            print("\n📖 See discord/docs/permissions.md for more details")
+            print("="*70)
+            raise
+        except discord.LoginFailure:
+            print("\n" + "="*70)
+            print("❌ INVALID BOT TOKEN")
+            print("="*70)
+            print("\nYour DISCORD_BOT_TOKEN is invalid or expired!")
+            print("\n📋 Steps to fix:")
+            print("1. Go to: https://discord.com/developers/applications")
+            print("2. Select your application")
+            print("3. Navigate to the 'Bot' section")
+            print("4. Click 'Reset Token' to get a new token")
+            print("5. Update your .env file with the new token")
+            print("6. Run this script again")
+            print("\n⚠️  Warning: Keep your token secret! Never commit it to git.")
+            print("="*70)
+            raise
 
 
 async def main():
@@ -357,8 +428,13 @@ async def main():
         await downloader.run()
     except KeyboardInterrupt:
         print("\n⚠️  Download interrupted by user")
+    except (discord.PrivilegedIntentsRequired, discord.LoginFailure):
+        # Error message already printed in run() method
+        pass
     except Exception as e:
-        print(f"\n❌ Error: {e}")
+        print(f"\n❌ Unexpected Error: {e}")
+        import traceback
+        traceback.print_exc()
 
 
 if __name__ == "__main__":
