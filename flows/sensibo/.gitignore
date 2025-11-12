@@ -1,0 +1,11 @@
+# n8n sensitive data
+*.env
+.env.local
+credentials.json
+
+# Logs
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
